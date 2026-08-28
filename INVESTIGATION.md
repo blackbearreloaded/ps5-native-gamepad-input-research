@@ -8,25 +8,24 @@ This report covers controller sampling after an application already has a valid 
 
 Use this shape once per input or simulation iteration:
 
-```c
-enum { PAD_SAMPLE_SIZE = 120, PAD_SAMPLE_CAPACITY = 64 };
-
-unsigned char samples[PAD_SAMPLE_SIZE * PAD_SAMPLE_CAPACITY];
-int count = scePadRead(handle, samples, PAD_SAMPLE_CAPACITY);
+```cpp
+std::array<ps5::pad::Data, ps5::pad::kMaxSamples> samples{};
+const auto count = scePadRead(
+    handle, samples.data(), static_cast<std::int32_t>(samples.size()));
 
 if (count > 0) {
-    for (int i = 0; i < count; ++i) {
-        const unsigned char *sample = samples + i * PAD_SAMPLE_SIZE;
+    const auto returned =
+        std::span{samples}.first(static_cast<std::size_t>(count));
+    for (const auto& sample : returned)
         process_edges_and_motion(sample);
-    }
 
-    use_as_current_state(samples + (count - 1) * PAD_SAMPLE_SIZE);
+    use_as_current_state(returned.back());
 }
 ```
 
-The actual application should use an independently documented `ScePadData`
-declaration rather than byte offsets. The byte buffer above only makes the
-record stride and batching behavior explicit.
+The fixed-size array is 7,680 bytes and requires no heap allocation. The
+independently authored `ps5::pad::Data` declaration preserves the 120-byte
+record stride while providing typed field access.
 
 Call the read as late as practical before simulation consumes input. This avoids adding a full frame of application-side queueing.
 

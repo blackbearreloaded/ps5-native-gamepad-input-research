@@ -32,7 +32,7 @@ controller pairing code, or a custom input thread.
 | Vibration and light bar | Contract-tested; repository device test pending |
 | Adaptive trigger effects and state | Contract-tested; repository device test pending |
 | Specialized device classes | Partial compatibility evidence only |
-| CI | Builds strict C11 examples and runs host-side contract checks |
+| CI | Builds strict C++20 examples and runs host-side contract checks |
 
 Platform interfaces can change. Re-run the layout checks and device tests
 before assuming compatibility with another system-software version.
@@ -97,7 +97,7 @@ values, coordinate handling, timestamps, and connection rules.
 
 ## Quick start
 
-The examples are portable C11 contract snippets. Host checks require no vendor
+The examples are portable C++20 contract snippets. Host checks require no vendor
 SDK, firmware files, proprietary headers, or console toolchain.
 
 ```sh
@@ -108,23 +108,36 @@ make check
 
 `make check` verifies the documented structure sizes and offsets, exercises
 button-edge and neutral-state behavior, checks axis conversion, and compiles
-every example with `-Wall -Wextra -Werror -pedantic`.
+every example with `-std=c++20 -Wall -Wextra -Wpedantic -Werror`.
 
 For a native PS5 application, import `libSceUserService` and `libScePad`, then
-use the declarations in [`include/ps5_pad.h`](include/ps5_pad.h):
+use the declarations in [`include/ps5_pad.hpp`](include/ps5_pad.hpp):
 
-```c
-int32_t user_id;
-sceUserServiceInitialize(NULL);
+```cpp
+#include "ps5_pad.hpp"
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+
+std::int32_t user_id{};
+sceUserServiceInitialize(nullptr);
 sceUserServiceGetInitialUser(&user_id);
 scePadInit();
 
-int32_t handle = scePadOpen(user_id, PS5_PAD_PORT_TYPE_STANDARD, 0, NULL);
+const auto handle =
+    scePadOpen(user_id, ps5::pad::kPortTypeStandard, 0, nullptr);
 
-ps5_pad_data_t samples[PS5_PAD_MAX_SAMPLES];
-int32_t count = scePadRead(handle, samples, PS5_PAD_MAX_SAMPLES);
-for (int32_t i = 0; i < count; ++i)
-    process_sample(&samples[i]);
+std::array<ps5::pad::Data, ps5::pad::kMaxSamples> samples{};
+const auto count = scePadRead(
+    handle, samples.data(), static_cast<std::int32_t>(samples.size()));
+if (count < 0)
+    handle_error(count);
+
+for (const auto& sample :
+     std::span{samples}.first(static_cast<std::size_t>(count)))
+    process_sample(sample);
 ```
 
 Production code must check every return value, neutralize disconnected or
@@ -159,19 +172,19 @@ shutdown. [Usage and lifecycle](USAGE.md) provides the complete sequence.
 | [Validation](VALIDATION.md) | Working applications, aggregate device evidence, publication boundary, and acceptance matrix |
 | [Production integration](PRODUCTION-INTEGRATION.md) | Batched streaming telemetry, protocol lifecycle, local chords, mouse mode, and latency diagnosis |
 | [Follow-up experiments](FOLLOW-UP.md) | Remaining latency measurements and optional ABI investigations |
-| [Examples](examples/README.md) | Feature-focused native C examples |
+| [Examples](examples/README.md) | Feature-focused native C++20 examples |
 
 ## Examples
 
 | Example | Demonstrates |
 | --- | --- |
-| [`01-lifecycle.c`](examples/01-lifecycle.c) | Signed-in user, ownership-aware initialization, open, and shutdown |
-| [`02-current-state.c`](examples/02-current-state.c) | Cached latest-state polling and correct neutral synthesis |
-| [`03-low-latency-batch.c`](examples/03-low-latency-batch.c) | 64-record drain with chronological press/release edges |
-| [`04-full-joystick.c`](examples/04-full-joystick.c) | Both sticks, analog triggers, complete button mask, and signed axes |
-| [`05-motion-touch.c`](examples/05-motion-touch.c) | Motion configuration and two-contact extraction |
-| [`06-feedback.c`](examples/06-feedback.c) | Vibration, light bar, adaptive-trigger feedback, and safe reset |
-| [`07-controller-info.c`](examples/07-controller-info.c) | Connection, device class, dead zones, and touch resolution |
+| [`01-lifecycle.cpp`](examples/01-lifecycle.cpp) | Signed-in user, ownership-aware initialization, RAII open, and shutdown |
+| [`02-current-state.cpp`](examples/02-current-state.cpp) | Cached latest-state polling and correct neutral synthesis |
+| [`03-low-latency-batch.cpp`](examples/03-low-latency-batch.cpp) | 64-record drain with chronological press/release edges |
+| [`04-full-joystick.cpp`](examples/04-full-joystick.cpp) | Both sticks, analog triggers, complete button mask, and signed axes |
+| [`05-motion-touch.cpp`](examples/05-motion-touch.cpp) | Motion configuration and two-contact extraction |
+| [`06-feedback.cpp`](examples/06-feedback.cpp) | Vibration, light bar, adaptive-trigger feedback, and safe reset |
+| [`07-controller-info.cpp`](examples/07-controller-info.cpp) | Connection, device class, dead zones, and touch resolution |
 
 The validation guide also summarizes two complete integrations: a native
 controller-forwarding path and an SDL-free UI adapter. Both were physically
@@ -191,10 +204,10 @@ STATIC-EVIDENCE.md              Functional compatibility evidence
 VALIDATION.md                   Device evidence and publication boundary
 PRODUCTION-INTEGRATION.md       Production batching, multiplexing, and telemetry lessons
 FOLLOW-UP.md                    Remaining optional experiments
-include/ps5_pad.h               Independently authored compatibility declarations
-examples/                       Small feature-focused C examples
-tests/layout_check.c            ABI size and offset regression
-tests/logic_check.c             Edge, neutral-state, and axis regression
+include/ps5_pad.hpp             Independently authored C++20 compatibility declarations
+examples/                       Small feature-focused C++20 examples
+tests/layout_check.cpp          ABI size and offset regression
+tests/logic_check.cpp           Edge, neutral-state, and axis regression
 .github/workflows/examples.yml  Host-side CI validation
 ```
 

@@ -5,9 +5,9 @@ examples. It intentionally omits proprietary binaries and excerpts, binary
 fingerprints, analysis-tool metadata, internal code addresses, private
 workspace locations, and acquisition details.
 
-The declarations in [`include/ps5_pad.h`](include/ps5_pad.h) are independently
+The declarations in [`include/ps5_pad.hpp`](include/ps5_pad.hpp) are independently
 authored for interoperability. Their structure sizes and offsets are checked by
-[`tests/layout_check.c`](tests/layout_check.c), and application behavior is
+[`tests/layout_check.cpp`](tests/layout_check.cpp), and application behavior is
 summarized in [VALIDATION.md](VALIDATION.md).
 
 ## Normal Pad input

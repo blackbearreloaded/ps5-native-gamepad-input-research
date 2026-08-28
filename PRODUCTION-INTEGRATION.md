@@ -17,9 +17,10 @@ change suppression, and a one-second keepalive.
 
 The production client later replaced the cached-state call with:
 
-```c
-ps5_pad_data_t samples[64];
-int count = scePadRead(handle, samples, 64);
+```cpp
+std::array<ps5::pad::Data, ps5::pad::kMaxSamples> samples{};
+const auto count = scePadRead(
+    handle, samples.data(), static_cast<std::int32_t>(samples.size()));
 ```
 
 This change followed a long gameplay report where input eventually stopped.

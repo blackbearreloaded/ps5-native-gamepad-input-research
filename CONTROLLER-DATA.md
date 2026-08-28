@@ -3,7 +3,7 @@
 ## Normal sample
 
 `scePadRead` format zero writes a 120-byte record. The declaration in
-[`include/ps5_pad.h`](include/ps5_pad.h) has compile-time size and offset checks.
+[`include/ps5_pad.hpp`](include/ps5_pad.hpp) has compile-time size and offset checks.
 
 | Offset | Size | Field | Meaning |
 |---:|---:|---|---|
@@ -59,9 +59,12 @@ for simple pressed/held/released actions.
 Raw axes use 128 as center. A full-range signed conversion used by the working
 streaming adapter is:
 
-```c
-int32_t axis = ((int32_t)value - 128) * 256;
-axis = clamp(axis, INT16_MIN, INT16_MAX);
+```cpp
+auto axis = (static_cast<std::int32_t>(value) - 128) * 256;
+axis = std::clamp(
+    axis,
+    static_cast<std::int32_t>(std::numeric_limits<std::int16_t>::min()),
+    static_cast<std::int32_t>(std::numeric_limits<std::int16_t>::max()));
 ```
 
 Invert Y when the destination convention expects positive values upward. The
@@ -81,10 +84,10 @@ response curves after centering and normalization.
 
 For each chronological sample:
 
-```c
-uint32_t changed  = previous ^ current;
-uint32_t pressed  = changed & current;
-uint32_t released = changed & previous;
+```cpp
+const ps5::pad::ButtonMask changed = previous ^ current;
+const auto pressed = changed & current;
+const auto released = changed & previous;
 previous = current;
 ```
 

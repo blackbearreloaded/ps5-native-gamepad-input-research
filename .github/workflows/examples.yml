@@ -12,5 +12,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Build examples and run contract checks
+      - name: Build C++20 examples and run contract checks
         run: make check

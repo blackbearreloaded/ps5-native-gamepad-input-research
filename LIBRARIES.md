@@ -13,7 +13,7 @@
 
 Only three functions are needed for the common single-user lifecycle:
 
-- `sceUserServiceInitialize(NULL)`;
+- `sceUserServiceInitialize(nullptr)`;
 - `sceUserServiceGetInitialUser(&user_id)`;
 - `sceUserServiceTerminate()` when this component owns initialization.
 
@@ -38,7 +38,7 @@ This is the application API. Its relevant exports fall into five groups.
 - `scePadSetLightBar`, `scePadResetLightBar`
 - `scePadSetTriggerEffect`, `scePadGetTriggerEffectState`
 
-These functions are declared in [`include/ps5_pad.h`](include/ps5_pad.h).
+These functions are declared in [`include/ps5_pad.hpp`](include/ps5_pad.hpp).
 
 ### Alternative read formats
 

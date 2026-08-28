@@ -9,7 +9,7 @@ libSceUserService
 libScePad
 ```
 
-The examples declare functions directly in [`include/ps5_pad.h`](include/ps5_pad.h).
+The examples declare functions directly in [`include/ps5_pad.hpp`](include/ps5_pad.hpp).
 In a project using generated stubs, add the same symbols to the UserService and
 Pad import catalogs. SDL may still provide video, audio-independent timing, or
 window events; do not initialize `SDL_INIT_JOYSTICK` when using this path.
@@ -20,17 +20,18 @@ The standard controller belongs to a signed-in user. Opening it as the system
 user can succeed yet remain permanently neutral, so obtain the user who started
 the application.
 
-```c
-int user_service_result = sceUserServiceInitialize(NULL);
-bool owns_user_service = user_service_result == 0;
+```cpp
+const auto user_service_result = sceUserServiceInitialize(nullptr);
+const bool owns_user_service = user_service_result == 0;
 
-int32_t user_id = -1;
+std::int32_t user_id = -1;
 if (sceUserServiceGetInitialUser(&user_id) < 0)
     fail();
 if (scePadInit() < 0)
     fail();
 
-int32_t handle = scePadOpen(user_id, PS5_PAD_PORT_TYPE_STANDARD, 0, NULL);
+const auto handle =
+    scePadOpen(user_id, ps5::pad::kPortTypeStandard, 0, nullptr);
 if (handle < 0)
     fail();
 ```
@@ -38,7 +39,7 @@ if (handle < 0)
 The initialization call can report that UserService is already initialized.
 That is not automatically fatal: continue to `GetInitialUser`, but call
 `sceUserServiceTerminate` at shutdown only when this component's initialize
-call returned zero. See [`examples/01-lifecycle.c`](examples/01-lifecycle.c).
+call returned zero. See [`examples/01-lifecycle.cpp`](examples/01-lifecycle.cpp).
 
 `port_type = 0` is the standard gamepad, and `index = 0` is the first standard
 pad for that user. Use one handle owner. If another component already opened
@@ -50,9 +51,9 @@ same queued state.
 
 ### Current state
 
-```c
-ps5_pad_data_t state;
-int result = scePadReadState(handle, &state);
+```cpp
+ps5::pad::Data state{};
+const auto result = scePadReadState(handle, &state);
 ```
 
 Use this when only the latest state matters and the poll interval is much
@@ -68,14 +69,16 @@ and release that both occur between calls can disappear.
 
 ### Batched samples
 
-```c
-ps5_pad_data_t samples[PS5_PAD_MAX_SAMPLES];
-int count = scePadRead(handle, samples, PS5_PAD_MAX_SAMPLES);
+```cpp
+std::array<ps5::pad::Data, ps5::pad::kMaxSamples> samples{};
+const auto count = scePadRead(
+    handle, samples.data(), static_cast<std::int32_t>(samples.size()));
 if (count < 0)
     handle_error(count);
 
-for (int i = 0; i < count; ++i)
-    process_sample(&samples[i]);
+for (const auto& sample :
+     std::span{samples}.first(static_cast<std::size_t>(count)))
+    process_sample(sample);
 ```
 
 Use this for frame-driven UIs and games, rhythm-sensitive actions, fighting
@@ -91,9 +94,8 @@ buffer is sufficient; no heap allocation is needed in the hot path.
 
 Apply these rules before interpreting controls:
 
-```c
-bool neutral = !sample->connected ||
-    (sample->buttons & PS5_PAD_BUTTON_INTERCEPTED) != 0;
+```cpp
+const bool neutral = !ps5::pad::is_usable(sample);
 ```
 
 If neutral:
@@ -163,8 +165,8 @@ platform limits still apply to the number of local controllers.
 
 Stop outputs before closing:
 
-```c
-ps5_pad_vibration_t stop = {0};
+```cpp
+const ps5::pad::Vibration stop{};
 scePadSetVibration(handle, &stop);
 scePadResetLightBar(handle);
 scePadClose(handle);

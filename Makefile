@@ -1,15 +1,15 @@
-CC ?= cc
-CFLAGS ?= -std=c11 -Wall -Wextra -Werror -pedantic
-EXAMPLES := $(wildcard examples/*.c)
+CXX ?= c++
+CXXFLAGS ?= -std=c++20 -Wall -Wextra -Wpedantic -Werror -fno-exceptions -fno-rtti
+EXAMPLES := $(wildcard examples/*.cpp)
 
 .PHONY: check
 check:
 	@set -e; tmpdir=$$(mktemp -d); tmp="$$tmpdir/layout-check"; \
 	trap 'rm -f "$$tmp"; rmdir "$$tmpdir"' EXIT; \
-	$(CC) $(CFLAGS) -Iinclude tests/layout_check.c -o "$$tmp"; \
+	$(CXX) $(CXXFLAGS) -Iinclude tests/layout_check.cpp -o "$$tmp"; \
 	"$$tmp"; \
-	$(CC) $(CFLAGS) -Iinclude tests/logic_check.c -o "$$tmp"; \
+	$(CXX) $(CXXFLAGS) -Iinclude tests/logic_check.cpp -o "$$tmp"; \
 	"$$tmp"; \
 	for source in $(EXAMPLES); do \
-		$(CC) $(CFLAGS) -Iinclude -fsyntax-only "$$source"; \
+		$(CXX) $(CXXFLAGS) -Iinclude -fsyntax-only "$$source"; \
 	done

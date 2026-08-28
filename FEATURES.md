@@ -4,9 +4,9 @@
 
 Call after opening a handle and whenever `connected_count` changes:
 
-```c
-ps5_pad_controller_information_t information = {0};
-int result = scePadGetControllerInformation(handle, &information);
+```cpp
+ps5::pad::ControllerInformation information{};
+const auto result = scePadGetControllerInformation(handle, &information);
 ```
 
 The 28-byte result provides touch-pad density/resolution, reported stick dead
@@ -20,7 +20,7 @@ and gun. Standard DualSense apps normally require only class zero.
 
 ## Motion configuration
 
-```c
+```cpp
 scePadSetMotionSensorState(handle, true);
 scePadSetTiltCorrectionState(handle, true);
 scePadSetAngularVelocityDeadbandState(handle, true);
@@ -33,14 +33,14 @@ scePadResetOrientation(handle);
 - Reset orientation recenters the current attitude.
 
 Check every return value. A device class without motion sensors may reject these
-calls. See [`examples/05-motion-touch.c`](examples/05-motion-touch.c).
+calls. See [`examples/05-motion-touch.cpp`](examples/05-motion-touch.cpp).
 
 ## Vibration
 
 The basic output has two unsigned 8-bit levels:
 
-```c
-ps5_pad_vibration_t vibration = {
+```cpp
+const ps5::pad::Vibration vibration{
     .large_motor = 180,
     .small_motor = 80,
 };
@@ -58,8 +58,8 @@ hot path.
 
 ## Light bar
 
-```c
-ps5_pad_color_t blue = {.r = 0, .g = 80, .b = 255};
+```cpp
+const ps5::pad::Color blue{.r = 0, .g = 80, .b = 255, .reserved = 0};
 scePadSetLightBar(handle, &blue);
 ```
 
@@ -104,12 +104,12 @@ Mode `3`:
 
 Build a zero-initialized command, validate these ranges in application code,
 set only the required bytes, and call `scePadSetTriggerEffect`. See
-[`examples/06-feedback.c`](examples/06-feedback.c).
+[`examples/06-feedback.cpp`](examples/06-feedback.cpp).
 
 `scePadGetTriggerEffectState` returns one integer state per trigger: intercepted
 `-1`, off `0`, feedback standby/active `1`/`2`, weapon standby/pulling/fired
 `3`/`4`/`5`, or vibration standby/active `6`/`7`. The names and values are
-declared in `ps5_pad_trigger_effect_status_t`; this repository has not yet
+declared by `ps5::pad::TriggerEffectStatus`; this repository has not yet
 hardware-validated the transitions.
 
 ## Touch and motion output to another protocol
