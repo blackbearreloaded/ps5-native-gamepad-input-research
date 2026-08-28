@@ -1,6 +1,6 @@
-# PS5 Native Controller Input
+# PS5 Native Gamepad Input Research
 
-[![Examples](https://github.com/blackbearreloaded/ps5-native-input/actions/workflows/examples.yml/badge.svg)](https://github.com/blackbearreloaded/ps5-native-input/actions/workflows/examples.yml)
+[![Examples](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research/actions/workflows/examples.yml/badge.svg)](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research/actions/workflows/examples.yml)
 [![Input API](https://img.shields.io/badge/input-libScePad-003791.svg)](LIBRARIES.md)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
@@ -101,8 +101,8 @@ The examples are portable C11 contract snippets. Host checks require no vendor
 SDK, firmware files, proprietary headers, or console toolchain.
 
 ```sh
-git clone git@github.com:blackbearreloaded/ps5-native-input.git
-cd ps5-native-input
+git clone git@github.com:blackbearreloaded/ps5-native-gamepad-input-research.git
+cd ps5-native-gamepad-input-research
 make check
 ```
 
