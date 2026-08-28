@@ -1,0 +1,13 @@
+# Local build products
+build/
+*.o
+*.obj
+*.exe
+*.elf
+
+# Private working material is never repository content
+.local/
+private/
+
+# Local runtime evidence
+*.log
