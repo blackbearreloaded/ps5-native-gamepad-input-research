@@ -9,6 +9,9 @@
   polling with zero read errors.
 - The UI adapter uses the maximum batch and has host regressions for button
   edges, left-stick dead zone, dominant-axis selection, and repeat behavior.
+- The native keyboard/mouse probe loaded both sysmodules and physically
+  captured keyboard HID usages plus mouse motion, primary/secondary buttons,
+  vertical wheel, and horizontal tilt from one wireless combination receiver.
 
 The remaining plan therefore focuses on quantitative sample timing and the
 features that have not yet received a dedicated physical fixture.
@@ -61,9 +64,9 @@ Capacity 1 through `scePadRead` should be tested separately from `scePadReadStat
 
 ### Keyboard and mouse
 
-- Run the native probe with an attached USB keyboard and mouse.
-- Confirm nonzero HID usages, left/right modifier bits, five mouse buttons,
-  vertical wheel, horizontal tilt where available, and unplug/reconnect state.
+- Confirm left/right modifier bits and LED state with dedicated keyboard input.
+- Confirm middle, X1, and X2 mouse buttons with hardware that exposes them.
+- Exercise unplug/reconnect and verify neutral edge publication.
 - Measure device timestamps and queue depths separately from application poll
   cadence.
 - Test merged mouse behavior only after the single-index path passes; use two

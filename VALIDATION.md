@@ -59,6 +59,25 @@ UserService and Pad lifecycle and completed a locked-device observation without
 a loader error, signal, or crash. That observation confirms startup and
 shutdown behavior; it does not independently prove physical controls.
 
+## Working application: native keyboard and mouse
+
+A C++20 probe loaded the native Keyboard and Mouse sysmodules, initialized both
+libraries, and opened indexes for the initial signed-in user. During a bounded
+device run, one wireless keyboard/mouse receiver produced independent native
+streams:
+
+- keyboard index 1 returned timestamped HID usage press/release transitions,
+  including simultaneous two-key states and an intercepted record;
+- mouse index 0 returned timestamped relative X/Y movement, primary and
+  secondary button transitions, vertical wheel values in both directions, and
+  horizontal tilt; and
+- inactive indexes returned neutral data without destabilizing the process.
+
+The run confirms physical capture through `libSceKeyboard` and
+`libSceMouse` without SDL, raw HID parsing, pairing code, or transport-level
+Bluetooth APIs. It does not establish a universal index assignment for other
+receivers.
+
 ## Publication boundary
 
 The public repository contains only independently authored documentation,
@@ -85,10 +104,15 @@ and aggregate test results needed to reproduce the application behavior.
 | Light bar | Contract-tested | No | Pending |
 | Adaptive triggers | Contract-tested | No | Pending |
 | Specialized device classes | Partial | No | Pending |
-| Keyboard lifecycle and 96-byte layout | Yes | Pending | Pending |
-| Keyboard HID usages/modifiers | Yes | Pending | Pending |
-| Mouse lifecycle and 40-byte layout | Yes | Pending | Pending |
-| Mouse motion/buttons/wheels | Yes | Pending | Pending |
-| Mouse zero-report idle behavior | Host-tested | Pending | Pending |
+| Keyboard module/init/open and 96-byte layout | Yes | Yes | Yes |
+| Keyboard HID usages and multi-key states | Yes | Yes | Yes |
+| Keyboard modifiers and LED state | Yes | Yes | Pending dedicated input |
+| Keyboard interception | Yes | Yes | Nonzero telemetry observed |
+| Mouse module/init/open and 40-byte layout | Yes | Yes | Yes |
+| Mouse relative X/Y | Yes | Yes | Yes |
+| Mouse primary/secondary buttons | Yes | Yes | Yes |
+| Mouse middle/X1/X2 buttons | Yes | Yes | Pending device controls |
+| Mouse vertical wheel/horizontal tilt | Yes | Yes | Yes |
+| Mouse no-record/neutral-record behavior | Host-tested | Yes | Neutral inactive index observed |
 
 Remaining device work is listed in [FOLLOW-UP.md](FOLLOW-UP.md).

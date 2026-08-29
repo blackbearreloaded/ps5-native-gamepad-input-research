@@ -96,7 +96,8 @@ a latency advantage over the normal Pad interface.
 Functional analysis of the application-facing Keyboard interface supports:
 
 - signed-in-user opens for normal type 0 and indexed devices;
-- twelve logical slots in the analyzed implementation;
+- twelve concurrent open-handle records in the analyzed implementation, which
+  do not establish a twelve-index physical-device range;
 - batched capacities from 1 through 16;
 - newest-record retention with chronological returned order;
 - a 96-byte record containing timestamp, interception, connection, LED and
@@ -105,26 +106,29 @@ Functional analysis of the application-facing Keyboard interface supports:
 - an idle/disconnected convention where `length` can be 1 while the first HID
   usage is zero.
 
-This establishes the independently authored structure and queue semantics. It
-does not by itself prove a particular physical keyboard or system-software
-version.
+Device testing subsequently confirmed native module load, initialization,
+signed-in-user open, timestamps, interception, and nonzero HID usage
+press/release records. A two-key state was also observed.
 
 ## Mouse input
 
 Functional analysis of the application-facing Mouse interface supports:
 
 - signed-in-user opens for normal type 0 and indexed devices;
-- eight logical slots in the analyzed implementation;
+- eight concurrent open-handle records in the analyzed implementation, which
+  do not establish an eight-index physical-device range;
 - batched capacities from 1 through 64;
 - a 40-byte record containing timestamp, connection, five buttons,
   interception, relative X/Y, vertical wheel, and horizontal tilt;
-- a zero-report connected-idle path that does not provide a new output record;
+- both a no-output return and a positive return containing a zero-filled
+  neutral record when an index has no active device;
 - pointer-speed values from 0 through 8; and
 - optional merged behavior for indexes 0 and 1.
 
 The merged path combines corresponding raw records from both indexes rather
-than globally sorting them by timestamp. This establishes compatibility
-behavior, not physical-device validation.
+than globally sorting them by timestamp. Device testing confirmed relative
+X/Y, primary and secondary buttons, vertical wheel in both directions, and
+horizontal tilt.
 
 ## Confidence boundary
 
@@ -133,4 +137,5 @@ and connection handling are device-tested. Touch and motion layouts are
 contract-tested but still need dedicated physical fixtures. Vibration,
 lighting, and adaptive-trigger declarations compile and pass layout checks but
 remain explicitly marked as pending physical verification. Keyboard and mouse
-contracts are host-tested and await the dedicated attached-device probe.
+module loading, opening, native timestamps, and non-neutral reads are
+device-tested; unobserved modifier/button variants remain contract-tested.

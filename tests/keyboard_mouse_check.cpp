@@ -97,6 +97,22 @@ int main()
     assert(previous_buttons == kButtonPrimary);
     assert(mouse_events == 0);
 
+    mouse_count = 1;
+    mouse_fixture[0] = {};
+    ButtonMask neutral_released{};
+    assert(ps5::mouse::examples::drain_mouse_samples(
+               2, previous_buttons,
+               [&mouse_events, &neutral_released](
+                   const ps5::mouse::Data&, ButtonMask,
+                   const ButtonMask up) noexcept {
+                   ++mouse_events;
+                   neutral_released |= up;
+               }) == 1);
+    assert(previous_buttons == 0);
+    assert(neutral_released == kButtonPrimary);
+    assert(mouse_events == 1);
+
+    previous_buttons = kButtonPrimary;
     mouse_count = 2;
     mouse_fixture[0].connected = 1;
     mouse_fixture[0].buttons = kButtonPrimary | kButtonX1;
@@ -115,7 +131,7 @@ int main()
                    pressed |= down;
                    released |= up;
                }) == 2);
-    assert(mouse_events == 2);
+    assert(mouse_events == 3);
     assert(pressed == kButtonX1);
     assert(released == (kButtonPrimary | kButtonX1));
     assert(previous_buttons == 0);

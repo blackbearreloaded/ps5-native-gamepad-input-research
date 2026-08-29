@@ -84,6 +84,12 @@ subset is initialization, signed-in-user open/get-handle, batched read,
 current-state read, connection query, and close. It exposes timestamped HID
 usage sets, left/right modifier bits, LED state, connection, and interception.
 
+The tested integration first loads sysmodule ID `0x0106`, then calls
+`sceKeyboardInit` and opens the selected index for the initial user. A
+wireless combination receiver produced keyboard reports on index 1 in the
+device test. Index assignment is environment-specific, so discover it instead
+of assuming that every keyboard is index 0.
+
 Use the batched read for press/release fidelity. Character composition and
 layout mapping are separate from the native key queue. See
 [Native keyboard and mouse input](KEYBOARD-MOUSE.md).
@@ -98,6 +104,10 @@ vertical and horizontal wheels, five buttons, connection, and interception.
 It can open one device index or merge indexes 0 and 1. Neither mode requires
 raw HID parsing or Bluetooth registration. See
 [Native keyboard and mouse input](KEYBOARD-MOUSE.md).
+
+The tested integration loads sysmodule ID `0x00a9` before initialization. The
+mouse interface of the same combination receiver produced reports on index 0,
+independently of its keyboard interface on index 1.
 
 ## `libSceHidControl`
 

@@ -8,16 +8,42 @@ device.
 
 ```text
 signed-in user
-  -> sceKeyboardInit -> sceKeyboardOpen(user, 0, index, nullptr)
-  -> sceMouseInit    -> sceMouseOpen(user, 0, index, parameters)
+  -> sceSysmoduleLoadModule(0x0106) -> sceKeyboardInit
+  -> sceKeyboardOpen(user, 0, selected index, nullptr)
+  -> sceSysmoduleLoadModule(0x00a9) -> sceMouseInit
+  -> sceMouseOpen(user, 0, selected index, parameters)
   -> drain both queues immediately before consuming input
   -> process every returned record oldest-first
   -> close both handles during controlled shutdown
+  -> unload modules only when this component owns their load
 ```
 
 `sceKeyboardInit` and `sceMouseInit` are process-wide and idempotent in the
-analyzed interfaces. There is no application need to pair devices, parse USB
-descriptors, or use Bluetooth transport APIs.
+analyzed interfaces. The device-tested homebrew integration explicitly loaded
+the Keyboard and Mouse sysmodules before its first direct API call. There is no
+application need to pair devices, parse USB descriptors, or use Bluetooth
+transport APIs.
+
+### Finding the physical index
+
+Device indexes and library handle capacity are different concepts. The
+analyzed Keyboard implementation tracks up to twelve concurrent open handles,
+and Mouse tracks up to eight; those numbers do not establish twelve keyboard
+indexes or eight mouse indexes.
+
+On the tested setup, indexes 0 and 1 opened successfully in both libraries,
+while higher indexes were rejected. A single wireless keyboard/mouse USB
+receiver then produced:
+
+| Interface | Active index | Physically observed data |
+| --- | ---: | --- |
+| Keyboard | 1 | HID usage press/release records, two-key states, timestamps, and interception |
+| Mouse | 0 | Relative X/Y, primary/secondary buttons, vertical wheel, horizontal tilt, and timestamps |
+
+This assignment is evidence from one receiver, not a universal index rule. A
+discovery build can open indexes 0 and 1, poll both briefly, retain the handle
+whose records have `connected != 0`, and close the inactive handle. Normal
+application polling should then read only the retained handle.
 
 ## Keyboard contract
 
@@ -33,7 +59,8 @@ The normal application subset is:
 
 The open-parameter object is eight reserved bytes in this interface. The normal
 implementation does not consume it, so pass `nullptr` or a zero-initialized
-object. The analyzed implementation maintains twelve logical keyboard slots.
+object. The analyzed implementation maintains twelve concurrent keyboard
+handle records; this is not a physical-index limit.
 
 `sceKeyboardRead` accepts capacities from 1 through 16. When more records are
 available than requested, it retains the newest requested records and returns
@@ -101,7 +128,8 @@ The normal application subset is:
 - `sceMouseSetPointerSpeed(handle, speed)`; and
 - `sceMouseClose(handle)`.
 
-The analyzed implementation maintains eight logical mouse slots.
+The analyzed implementation maintains eight concurrent mouse handle records;
+this is not a physical-index limit.
 `sceMouseRead` accepts capacities from 1 through 64 and retains the newest
 requested records if the caller provides less room than the available queue.
 Use capacity 64 for a loss-resistant low-latency drain.
@@ -143,17 +171,26 @@ Button bits 0 through 4 are primary, secondary, middle, X1, and X2. Bit 31
 marks an intercepted report. Motion and wheel fields are relative deltas; add
 them to application state rather than treating them as absolute coordinates.
 
-### The zero-report rule
+### No-record and neutral-record rules
 
-When a connected mouse has no new report, `sceMouseRead` can return `0` without
-writing a new output record. On zero:
+`sceMouseRead` has two outcomes that an application must distinguish:
+
+- a return value of `0` supplies no output record and leaves the caller with
+  nothing to process; and
+- a positive count can include a zero-filled neutral record for an inactive or
+  disconnected index.
+
+On a zero return:
 
 - do not parse the buffer;
 - do not replay its old motion or wheel values; and
 - do not clear the remembered held-button state.
 
-Only a newly returned record changes buttons. Disconnection or interception
-should publish a neutral button state and zero deltas.
+Process every record included in a positive return count. A returned neutral,
+disconnected, or intercepted record should publish neutral buttons and zero
+deltas. In the device probe, an inactive mouse index repeatedly returned one
+zero-filled record; filtering those records by `connected` exposed the active
+index's physical reports.
 
 Pointer speed accepts values 0 through 8 in the analyzed interface. The normal
 read conversion applies that setting before exposing 32-bit relative axes.
@@ -186,7 +223,8 @@ hot path deterministic.
 - [`examples/08-keyboard-batch.cpp`](examples/08-keyboard-batch.cpp) derives
   chronological key press/release edges from HID usage sets.
 - [`examples/09-mouse-batch.cpp`](examples/09-mouse-batch.cpp) preserves held
-  buttons across zero-report polls and neutralizes intercepted records.
+  buttons when no record is returned and neutralizes disconnected or
+  intercepted records.
 - [`examples/native-keyboard-mouse-poc`](examples/native-keyboard-mouse-poc)
   is a deployable source overlay that records attached-device activity.
 

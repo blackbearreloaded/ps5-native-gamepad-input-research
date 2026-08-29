@@ -31,8 +31,12 @@ template <typename Callback>
         const auto clean = is_usable(sample) ? sample : Data{};
         const auto current = clean.buttons;
         const auto changed = previous_buttons ^ current;
-        std::invoke(callback, std::as_const(clean), changed & current,
-                    changed & previous_buttons);
+        const bool has_delta = clean.x != 0 || clean.y != 0 ||
+                               clean.wheel != 0 || clean.tilt != 0;
+        if (changed != 0 || has_delta) {
+            std::invoke(callback, std::as_const(clean), changed & current,
+                        changed & previous_buttons);
+        }
         previous_buttons = current;
     }
     return count;

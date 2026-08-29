@@ -32,8 +32,8 @@ required.
 | Vibration and light bar | Contract-tested; repository device test pending |
 | Adaptive trigger effects and state | Contract-tested; repository device test pending |
 | Specialized device classes | Partial compatibility evidence only |
-| Native keyboard queue and 96-byte record | Contract-tested; physical probe pending |
-| Native mouse queue and 40-byte record | Contract-tested; physical probe pending |
+| Native keyboard queue and 96-byte record | Device-tested with timestamped HID key transitions |
+| Native mouse queue and 40-byte record | Device-tested with motion, clicks, wheel, and tilt |
 | CI | Builds strict C++20 examples and runs host-side contract checks |
 
 Platform interfaces can change. Re-run the layout checks and device tests
@@ -43,7 +43,7 @@ before assuming compatibility with another system-software version.
 
 | Finding | Result |
 | --- | --- |
-| Recommended libraries | `libSceUserService` + `libScePad` |
+| Recommended libraries | `libSceUserService` plus `libScePad`, `libSceKeyboard`, or `libSceMouse` |
 | Lowest-risk low-latency API | `scePadRead(handle, samples, 64)` |
 | Driver interaction | One platform-driver request per batch read |
 | Returned order | Oldest retained sample first; newest sample last |
@@ -57,7 +57,9 @@ before assuming compatibility with another system-software version.
 | `libSceBluetoothHid` | Raw Bluetooth transport, not a faster application input path |
 | Keyboard path | `sceKeyboardRead(handle, samples, 16)` with USB HID usages |
 | Mouse path | `sceMouseRead(handle, samples, 64)` with relative axes and wheels |
-| Mouse idle poll | Zero reports; preserve held buttons and ignore stale buffer motion |
+| Keyboard/mouse loading | Load native sysmodule IDs `0x0106` and `0x00a9` before initialization |
+| Physical index discovery | Probe indexes 0 and 1, then retain only the index that reports the device |
+| Empty/inactive reads | Process exactly the returned count; a neutral record may be returned for an inactive index |
 
 ## Recommended input path
 
@@ -117,8 +119,8 @@ make check
 
 `make check` verifies all documented gamepad, keyboard, and mouse structure
 sizes and offsets; exercises edge and neutral-state behavior; checks axis
-conversion and mouse idle semantics; and compiles every portable example with
-strict C++20 warnings.
+conversion and mouse no-record semantics; and compiles every portable example
+with strict C++20 warnings.
 
 For a native PS5 application, import `libSceUserService` and `libScePad`, then
 use the declarations in [`include/ps5_pad.hpp`](include/ps5_pad.hpp):
@@ -197,7 +199,7 @@ shutdown. [Usage and lifecycle](USAGE.md) provides the complete sequence.
 | [`06-feedback.cpp`](examples/06-feedback.cpp) | Vibration, light bar, adaptive-trigger feedback, and safe reset |
 | [`07-controller-info.cpp`](examples/07-controller-info.cpp) | Connection, device class, dead zones, and touch resolution |
 | [`08-keyboard-batch.cpp`](examples/08-keyboard-batch.cpp) | Sixteen-record keyboard drain and chronological HID-usage edges |
-| [`09-mouse-batch.cpp`](examples/09-mouse-batch.cpp) | Sixty-four-record relative mouse drain and correct zero-report handling |
+| [`09-mouse-batch.cpp`](examples/09-mouse-batch.cpp) | Sixty-four-record relative mouse drain and correct no-record/neutral handling |
 | [`native-keyboard-mouse-poc`](examples/native-keyboard-mouse-poc) | Deployable source overlay for attached-device capture evidence |
 
 The validation guide also summarizes two complete integrations: a native
@@ -223,7 +225,7 @@ include/ps5_*.hpp               Independently authored C++20 compatibility decla
 examples/                       Small feature-focused C++20 examples
 tests/layout_check.cpp          ABI size and offset regression
 tests/logic_check.cpp           Edge, neutral-state, and axis regression
-tests/keyboard_mouse_check.cpp  Physical-input queue behavior regression
+tests/keyboard_mouse_check.cpp  Keyboard/mouse queue behavior regression
 .github/workflows/examples.yml  Host-side CI validation
 ```
 
