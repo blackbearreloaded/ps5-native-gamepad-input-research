@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <fcntl.h>
@@ -20,17 +19,16 @@ std::int32_t sceKernelSendNotificationRequest(
     std::uint32_t device, void* request, std::size_t size,
     std::int32_t blocking);
 std::int32_t sceKernelUsleep(std::uint32_t microseconds);
-std::int32_t sceKernelLoadStartModule(
-    const char* path, std::size_t argument_size, const void* arguments,
-    std::uint32_t flags, const void* options, std::int32_t* result);
-std::int32_t sceKernelDlsym(
-    std::int32_t module_handle, const char* name, void** address);
+std::int32_t sceSysmoduleLoadModule(std::uint16_t id);
+std::int32_t sceSysmoduleUnloadModule(std::uint16_t id);
 
 }
 
 namespace {
 
 constexpr std::string_view kLogPath = "/download0/ps5-input-probe.log";
+constexpr std::uint16_t kKeyboardSysmodule = 0x0106;
+constexpr std::uint16_t kMouseSysmodule = 0x00a9;
 
 struct NotificationRequest {
     std::array<std::uint8_t, 45> reserved{};
@@ -128,102 +126,22 @@ void record_checkpoint(
     record(line);
 }
 
-template <typename Function>
-[[nodiscard]] bool resolve(
-    const std::int32_t module_handle, const std::string_view name,
-    Function& function) noexcept
-{
-    static_assert(sizeof(Function) == sizeof(void*));
-    void* address = nullptr;
-    const auto result = sceKernelDlsym(module_handle, name.data(), &address);
-    record_checkpoint(name, result);
-    if (result != 0 || address == nullptr) {
-        function = nullptr;
-        return false;
-    }
-    function = std::bit_cast<Function>(address);
-    return true;
-}
-
-struct NativeInputApi {
-    using KeyboardInit = std::int32_t (*)();
-    using KeyboardOpen = std::int32_t (*)(
-        std::int32_t, std::int32_t, std::int32_t,
-        const ps5::keyboard::OpenParameters*);
-    using KeyboardRead = std::int32_t (*)(
-        std::int32_t, ps5::keyboard::Data*, std::int32_t);
-    using KeyboardClose = std::int32_t (*)(std::int32_t);
-    using MouseInit = std::int32_t (*)();
-    using MouseOpen = std::int32_t (*)(
-        std::int32_t, std::int32_t, std::int32_t,
-        const ps5::mouse::OpenParameters*);
-    using MouseRead = std::int32_t (*)(
-        std::int32_t, ps5::mouse::Data*, std::int32_t);
-    using MouseClose = std::int32_t (*)(std::int32_t);
-
-    void load() noexcept
-    {
-        keyboard_module = sceKernelLoadStartModule(
-            "libSceKeyboard.sprx", 0, nullptr, 0, nullptr, nullptr);
-        record_checkpoint("keyboard-module", keyboard_module);
-        if (keyboard_module >= 0) {
-            keyboard_ready = resolve(
-                keyboard_module, "sceKeyboardInit", keyboard_init);
-            keyboard_ready = resolve(
-                                 keyboard_module, "sceKeyboardOpen",
-                                 keyboard_open) &&
-                             keyboard_ready;
-            keyboard_ready = resolve(
-                                 keyboard_module, "sceKeyboardRead",
-                                 keyboard_read) &&
-                             keyboard_ready;
-            keyboard_ready = resolve(
-                                 keyboard_module, "sceKeyboardClose",
-                                 keyboard_close) &&
-                             keyboard_ready;
-        }
-
-        mouse_module = sceKernelLoadStartModule(
-            "libSceMouse.sprx", 0, nullptr, 0, nullptr, nullptr);
-        record_checkpoint("mouse-module", mouse_module);
-        if (mouse_module >= 0) {
-            mouse_ready = resolve(mouse_module, "sceMouseInit", mouse_init);
-            mouse_ready =
-                resolve(mouse_module, "sceMouseOpen", mouse_open) &&
-                mouse_ready;
-            mouse_ready =
-                resolve(mouse_module, "sceMouseRead", mouse_read) &&
-                mouse_ready;
-            mouse_ready =
-                resolve(mouse_module, "sceMouseClose", mouse_close) &&
-                mouse_ready;
-        }
-    }
-
-    std::int32_t keyboard_module{-1};
-    std::int32_t mouse_module{-1};
-    KeyboardInit keyboard_init{};
-    KeyboardOpen keyboard_open{};
-    KeyboardRead keyboard_read{};
-    KeyboardClose keyboard_close{};
-    MouseInit mouse_init{};
-    MouseOpen mouse_open{};
-    MouseRead mouse_read{};
-    MouseClose mouse_close{};
-    bool keyboard_ready{};
-    bool mouse_ready{};
-};
-
 class InputSession final {
 public:
-    explicit InputSession(NativeInputApi& api) noexcept : api_(api) {}
+    InputSession() noexcept = default;
     ~InputSession() noexcept
     {
-        if (mouse_handle >= 0 && api_.mouse_close != nullptr) {
-            static_cast<void>(api_.mouse_close(mouse_handle));
+        if (mouse_handle >= 0) {
+            static_cast<void>(sceMouseClose(mouse_handle));
         }
-        if (keyboard_handle >= 0 && api_.keyboard_close != nullptr) {
-            static_cast<void>(api_.keyboard_close(keyboard_handle));
+        if (keyboard_handle >= 0) {
+            static_cast<void>(sceKeyboardClose(keyboard_handle));
+        }
+        if (mouse_module_result == 0) {
+            static_cast<void>(sceSysmoduleUnloadModule(kMouseSysmodule));
+        }
+        if (keyboard_module_result == 0) {
+            static_cast<void>(sceSysmoduleUnloadModule(kKeyboardSysmodule));
         }
         if (owns_user_service) {
             static_cast<void>(sceUserServiceTerminate());
@@ -235,8 +153,6 @@ public:
 
     void open() noexcept
     {
-        api_.load();
-
         user_service_result = sceUserServiceInitialize(nullptr);
         record_checkpoint("user-service-init", user_service_result);
         owns_user_service = user_service_result == 0;
@@ -246,24 +162,28 @@ public:
             return;
         }
 
-        if (api_.keyboard_ready) {
-            keyboard_init_result = api_.keyboard_init();
+        keyboard_module_result = sceSysmoduleLoadModule(kKeyboardSysmodule);
+        record_checkpoint("keyboard-sysmodule", keyboard_module_result);
+        if (keyboard_module_result >= 0) {
+            keyboard_init_result = sceKeyboardInit();
             record_checkpoint("keyboard-init", keyboard_init_result);
         }
         if (keyboard_init_result >= 0) {
             const ps5::keyboard::OpenParameters parameters{};
-            keyboard_handle = api_.keyboard_open(
+            keyboard_handle = sceKeyboardOpen(
                 user_id, ps5::keyboard::kTypeStandard, 0, &parameters);
             record_checkpoint("keyboard-open", keyboard_handle);
         }
 
-        if (api_.mouse_ready) {
-            mouse_init_result = api_.mouse_init();
+        mouse_module_result = sceSysmoduleLoadModule(kMouseSysmodule);
+        record_checkpoint("mouse-sysmodule", mouse_module_result);
+        if (mouse_module_result >= 0) {
+            mouse_init_result = sceMouseInit();
             record_checkpoint("mouse-init", mouse_init_result);
         }
         if (mouse_init_result >= 0) {
             const ps5::mouse::OpenParameters parameters{};
-            mouse_handle = api_.mouse_open(
+            mouse_handle = sceMouseOpen(
                 user_id, ps5::mouse::kTypeStandard, 0, &parameters);
             record_checkpoint("mouse-open", mouse_handle);
         }
@@ -273,13 +193,12 @@ public:
     std::int32_t user_result{-1};
     std::int32_t keyboard_init_result{-1};
     std::int32_t keyboard_handle{-1};
+    std::int32_t keyboard_module_result{-1};
     std::int32_t mouse_init_result{-1};
     std::int32_t mouse_handle{-1};
+    std::int32_t mouse_module_result{-1};
     std::int32_t user_id{-1};
     bool owns_user_service{};
-
-private:
-    NativeInputApi& api_;
 };
 
 void record_start(const InputSession& session) noexcept
@@ -291,10 +210,14 @@ void record_start(const InputSession& session) noexcept
     line.append_integer(session.user_result);
     line.append(" keyboardInit=");
     line.append_integer(session.keyboard_init_result);
+    line.append(" keyboardModule=");
+    line.append_integer(session.keyboard_module_result);
     line.append(" keyboardHandle=");
     line.append_integer(session.keyboard_handle);
     line.append(" mouseInit=");
     line.append_integer(session.mouse_init_result);
+    line.append(" mouseModule=");
+    line.append_integer(session.mouse_module_result);
     line.append(" mouseHandle=");
     line.append_integer(session.mouse_handle);
     record(line);
@@ -361,8 +284,7 @@ int main()
     reset_log();
     record_checkpoint("entered-main", 0);
 
-    NativeInputApi api;
-    InputSession session{api};
+    InputSession session;
     session.open();
     record_start(session);
 
@@ -386,7 +308,7 @@ int main()
 
     for (;;) {
         if (session.keyboard_handle >= 0) {
-            const auto count = api.keyboard_read(
+            const auto count = sceKeyboardRead(
                 session.keyboard_handle, keyboard_samples.data(),
                 static_cast<std::int32_t>(keyboard_samples.size()));
             if (count > 0) {
@@ -422,7 +344,7 @@ int main()
         }
 
         if (session.mouse_handle >= 0) {
-            const auto count = api.mouse_read(
+            const auto count = sceMouseRead(
                 session.mouse_handle, mouse_samples.data(),
                 static_cast<std::int32_t>(mouse_samples.size()));
             if (count > 0) {
