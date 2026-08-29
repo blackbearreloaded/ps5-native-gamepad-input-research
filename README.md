@@ -281,3 +281,5 @@ See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
 PlayStation, PS5, and DualSense are trademarks of Sony Interactive
 Entertainment. This independent project is not affiliated with or endorsed by
 Sony Interactive Entertainment.
+
+This project was developed with assistance from OpenAI Codex, including some original interface artwork. Project maintainers reviewed and validated the resulting code, tests, documentation, dependencies, and generated assets.
