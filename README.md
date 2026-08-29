@@ -250,6 +250,12 @@ Evidence labels are intentionally narrow:
 - **Experimental:** a plausible interface exists, but physical behavior,
   privileges, or some structure fields remain incomplete.
 
+## External projects and acknowledgements
+
+| Project | Relevance |
+| --- | --- |
+| [Ghostcontrol — PS5 USB Controller Patcher](https://github.com/StonedModder/Ghostcontrol-PS5-USB-Controller-Patcher) | Inspiration and related investigation into third-party USB controller support and virtual DualSense input by StonedModder |
+
 ## Scope
 
 This repository publishes independently authored documentation and small
