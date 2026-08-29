@@ -10,12 +10,17 @@ when each device produces physical input, and appends bounded records to:
 
 The source is intended as a small overlay for a known-working native app
 boilerplate. Add this repository's `include/` directory to the compiler include
-path and import `libSceUserService`, `libSceKeyboard`, `libSceMouse`, and the
-kernel functions used by `src/main.cpp`.
+path and import `libSceUserService` plus the kernel functions used by
+`src/main.cpp`.
 
-Some community payload SDK snapshots provide a keyboard import stub but omit a
-mouse stub. `link-stubs/mouse_link_stub.cpp` is a clean-room link declaration
-for that case. Build it as a temporary shared provider named
+At startup, the probe explicitly loads `libSceKeyboard` and `libSceMouse` and
+resolves the required native entry points once. Polling then calls the cached
+function pointers directly; symbol lookup is not part of the input loop. This
+also avoids depending on keyboard and mouse link stubs supplied by a particular
+community toolchain snapshot.
+
+`link-stubs/mouse_link_stub.cpp` remains available for applications that prefer
+static system-module imports. Build it as a temporary shared provider named
 `libSceMouse.prx`, pass it to the native module-linking step as a system-module
 stub, and do not package its fallback bodies in the application.
 
