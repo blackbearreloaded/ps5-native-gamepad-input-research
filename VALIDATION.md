@@ -73,6 +73,11 @@ streams:
   horizontal tilt; and
 - inactive indexes returned neutral data without destabilizing the process.
 
+A follow-up run removed the receiver for several seconds while all accepted
+handles remained open. Both active interfaces reported `connected == 0`.
+After reconnection, the same keyboard and mouse handles resumed non-neutral
+input without being reopened.
+
 The run confirms physical capture through `libSceKeyboard` and
 `libSceMouse` without SDL, raw HID parsing, pairing code, or transport-level
 Bluetooth APIs. It does not establish a universal index assignment for other
@@ -114,5 +119,7 @@ and aggregate test results needed to reproduce the application behavior.
 | Mouse middle/X1/X2 buttons | Yes | Yes | Pending device controls |
 | Mouse vertical wheel/horizontal tilt | Yes | Yes | Yes |
 | Mouse no-record/neutral-record behavior | Host-tested | Yes | Neutral inactive index observed |
+| Keyboard/mouse unplug and reconnect | Yes | Yes | Same handles resumed physical input |
+| Multiple simultaneous keyboards or mice | Partial | No | Pending separate devices |
 
 Remaining device work is listed in [FOLLOW-UP.md](FOLLOW-UP.md).

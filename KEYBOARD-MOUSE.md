@@ -41,9 +41,25 @@ receiver then produced:
 | Mouse | 0 | Relative X/Y, primary/secondary buttons, vertical wheel, horizontal tilt, and timestamps |
 
 This assignment is evidence from one receiver, not a universal index rule. A
-discovery build can open indexes 0 and 1, poll both briefly, retain the handle
-whose records have `connected != 0`, and close the inactive handle. Normal
-application polling should then read only the retained handle.
+robust application should open every accepted index, retain every successful
+handle, and track `connected` independently for each one. Keeping inactive
+handles allows a later attachment, reconnection on a different index, or
+multiple same-class devices to be discovered without restarting the input
+system. Close an inactive handle only when the application intentionally does
+not support hot-plug or multiple devices.
+
+### Hot-plug and reconnect validation
+
+The retained-handle strategy was physically tested by removing the active
+wireless receiver for several seconds and reconnecting it. The already-open
+keyboard index 1 and mouse index 0 handles each returned a neutral
+`connected == 0` record. After the receiver returned, those same handles
+resumed timestamped keyboard and mouse input without another initialization or
+open call.
+
+This validates removal and reconnection for the tested combination receiver.
+Simultaneous independent keyboards or mice still need a separate multi-device
+test.
 
 ## Keyboard contract
 
@@ -213,6 +229,12 @@ Read immediately before input consumption to avoid adding an application
 frame. One owner should drain each handle. A dedicated input thread is useful
 only when the application frame can block longer than the acceptable input
 interval; it does not make the native device report cadence faster.
+
+For hot-plug support, continue polling every successfully opened index and
+treat `connected` transitions as device arrival/removal. The tested index range
+is small enough that the discovery probe simply polls all accepted handles at
+the same 4 ms cadence; optimize inactive polling only after measuring a real
+cost.
 
 At a 4 ms application poll, the maximum caller storage is 1,536 bytes for
 keyboard and 2,560 bytes for mouse. Fixed arrays avoid allocation and keep the

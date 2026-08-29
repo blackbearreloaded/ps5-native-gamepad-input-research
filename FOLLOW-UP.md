@@ -12,6 +12,8 @@
 - The native keyboard/mouse probe loaded both sysmodules and physically
   captured keyboard HID usages plus mouse motion, primary/secondary buttons,
   vertical wheel, and horizontal tilt from one wireless combination receiver.
+- The same open keyboard and mouse handles detected receiver removal and
+  resumed non-neutral input after reconnection without reinitialization.
 
 The remaining plan therefore focuses on quantitative sample timing and the
 features that have not yet received a dedicated physical fixture.
@@ -66,7 +68,8 @@ Capacity 1 through `scePadRead` should be tested separately from `scePadReadStat
 
 - Confirm left/right modifier bits and LED state with dedicated keyboard input.
 - Confirm middle, X1, and X2 mouse buttons with hardware that exposes them.
-- Exercise unplug/reconnect and verify neutral edge publication.
+- Attach separate same-class devices and verify simultaneous independent
+  indexes.
 - Measure device timestamps and queue depths separately from application poll
   cadence.
 - Test merged mouse behavior only after the single-index path passes; use two

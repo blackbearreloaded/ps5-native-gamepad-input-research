@@ -32,8 +32,9 @@ Status: completed
 ## Result
 
 The frozen probe loaded and opened both native interfaces, captured non-neutral
-keyboard and mouse records from one wireless combination receiver, stopped
-without a reported application crash, and passed the postflight service-health
-check. Public documentation contains aggregate interoperability findings only;
+keyboard and mouse records from one wireless combination receiver, and reused
+the same handles after physical removal and reconnection. It stopped without a
+reported application crash and passed the postflight service-health check.
+Public documentation contains aggregate interoperability findings only;
 private identifiers, binaries, raw logs, and analysis artifacts remain outside
 the repository.

@@ -19,10 +19,16 @@ documented Keyboard and Mouse module IDs, initializes both libraries, and uses
 direct native imports. Symbol lookup is not part of the input loop.
 
 The broad index scan is diagnostic behavior. It logs each open result and the
-source index of every connected record. Once an application's device index is
-known, production code should open and poll only that index. A tested wireless
-combination receiver exposed its keyboard on index 1 and mouse on index 0,
-showing that interfaces sharing one USB receiver need not share an index.
+source index of every connected record. It intentionally retains and polls all
+successfully opened handles so devices attached later and multiple devices can
+be observed. An application with a fixed, non-hot-pluggable device set may
+close inactive handles after discovery. A tested wireless combination receiver
+exposed its keyboard on index 1 and mouse on index 0, showing that interfaces
+sharing one USB receiver need not share an index.
+
+Retaining those handles was also physically validated across receiver removal
+and reconnection: both interfaces reported disconnection, then resumed input
+through the original handles without another open call.
 
 `link-stubs/mouse_link_stub.cpp` is available when a community toolchain lacks
 the Mouse import stub. Build it as a temporary shared provider named

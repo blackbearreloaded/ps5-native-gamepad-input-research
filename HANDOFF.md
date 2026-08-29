@@ -17,4 +17,5 @@ Updated: 2026-08-29 EDT
 
 - 2026-08-29 | G2 | 8b3a35c | native probe built and frozen | passed
 - 2026-08-29 | G3 | 8b3a35c | keyboard HID and mouse motion/button/wheel streams physically captured | passed
+- 2026-08-29 | G3 | 8b3a35c | retained keyboard/mouse handles survived receiver removal and resumed input | passed
 - 2026-08-29 | G4 | current revision | supported findings, examples, and validation matrix updated | passed

@@ -34,6 +34,7 @@ required.
 | Specialized device classes | Partial compatibility evidence only |
 | Native keyboard queue and 96-byte record | Device-tested with timestamped HID key transitions |
 | Native mouse queue and 40-byte record | Device-tested with motion, clicks, wheel, and tilt |
+| Keyboard/mouse hot-plug | Device-tested with retained handles across receiver removal and reconnection |
 | CI | Builds strict C++20 examples and runs host-side contract checks |
 
 Platform interfaces can change. Re-run the layout checks and device tests
@@ -58,8 +59,9 @@ before assuming compatibility with another system-software version.
 | Keyboard path | `sceKeyboardRead(handle, samples, 16)` with USB HID usages |
 | Mouse path | `sceMouseRead(handle, samples, 64)` with relative axes and wheels |
 | Keyboard/mouse loading | Load native sysmodule IDs `0x0106` and `0x00a9` before initialization |
-| Physical index discovery | Probe indexes 0 and 1, then retain only the index that reports the device |
+| Physical index discovery | Open every accepted index and retain successful handles for hot-plug and multiple devices |
 | Empty/inactive reads | Process exactly the returned count; a neutral record may be returned for an inactive index |
+| Hot-plug behavior | Existing handles reported removal and resumed input after reconnection; no reopen was needed |
 
 ## Recommended input path
 
