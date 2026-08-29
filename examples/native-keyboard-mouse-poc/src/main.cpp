@@ -164,8 +164,7 @@ struct NativeInputApi {
     void load() noexcept
     {
         keyboard_module = sceKernelLoadStartModule(
-            "/system/common/lib/libSceKeyboard.sprx", 0, nullptr, 0, nullptr,
-            nullptr);
+            "libSceKeyboard.sprx", 0, nullptr, 0, nullptr, nullptr);
         record_checkpoint("keyboard-module", keyboard_module);
         if (keyboard_module >= 0) {
             keyboard_ready = resolve(
@@ -185,8 +184,7 @@ struct NativeInputApi {
         }
 
         mouse_module = sceKernelLoadStartModule(
-            "/system/common/lib/libSceMouse.sprx", 0, nullptr, 0, nullptr,
-            nullptr);
+            "libSceMouse.sprx", 0, nullptr, 0, nullptr, nullptr);
         record_checkpoint("mouse-module", mouse_module);
         if (mouse_module >= 0) {
             mouse_ready = resolve(mouse_module, "sceMouseInit", mouse_init);
