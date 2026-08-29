@@ -1,19 +1,19 @@
-# PS5 Native Gamepad Input Research
+# PS5 Native Gamepad, Keyboard and Mouse Input Research
 
 [![Examples](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research/actions/workflows/examples.yml/badge.svg)](https://github.com/blackbearreloaded/ps5-native-gamepad-input-research/actions/workflows/examples.yml)
-[![Input API](https://img.shields.io/badge/input-libScePad-003791.svg)](LIBRARIES.md)
+[![Input APIs](https://img.shields.io/badge/input-Pad%20%7C%20Keyboard%20%7C%20Mouse-003791.svg)](LIBRARIES.md)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
-Independently documented and device-tested guidance for native, low-latency
-PlayStation 5 controller input. The repository covers controller
-lifecycle, batched and current-state reads, every verified DualSense field,
-motion, touch, feedback, adaptive triggers, and the responsibilities of the
-underlying PS5 libraries.
+Independently documented guidance for native, low-latency PlayStation 5 input.
+The repository covers gamepad, USB keyboard, and USB mouse lifecycle and
+batching; every verified DualSense field; motion, touch, feedback, and adaptive
+triggers; and the responsibilities of the underlying PS5 libraries.
 
 The normal application path is deliberately small: use `libSceUserService` to
-resolve the signed-in player and `libScePad` for input and output. The working
-applications do not require SDL joystick support, raw Bluetooth HID reports,
-controller pairing code, or a custom input thread.
+resolve the signed-in player, then `libScePad`, `libSceKeyboard`, or
+`libSceMouse` for the selected device. No SDL input subsystem, raw HID report
+parser, controller pairing code, or privileged device-control interface is
+required.
 
 ## Project status
 
@@ -32,6 +32,8 @@ controller pairing code, or a custom input thread.
 | Vibration and light bar | Contract-tested; repository device test pending |
 | Adaptive trigger effects and state | Contract-tested; repository device test pending |
 | Specialized device classes | Partial compatibility evidence only |
+| Native keyboard queue and 96-byte record | Contract-tested; physical probe pending |
+| Native mouse queue and 40-byte record | Contract-tested; physical probe pending |
 | CI | Builds strict C++20 examples and runs host-side contract checks |
 
 Platform interfaces can change. Re-run the layout checks and device tests
@@ -53,6 +55,9 @@ before assuming compatibility with another system-software version.
 | USB versus Bluetooth | Hidden behind the same Pad API |
 | `libSceHidControl` | Specialized Jedi/Spark service controls, not the normal gamepad queue |
 | `libSceBluetoothHid` | Raw Bluetooth transport, not a faster application input path |
+| Keyboard path | `sceKeyboardRead(handle, samples, 16)` with USB HID usages |
+| Mouse path | `sceMouseRead(handle, samples, 64)` with relative axes and wheels |
+| Mouse idle poll | Zero reports; preserve held buttons and ignore stale buffer motion |
 
 ## Recommended input path
 
@@ -95,6 +100,10 @@ globally locked read core.
 See [Controller data format](CONTROLLER-DATA.md) for the exact offsets, button
 values, coordinate handling, timestamps, and connection rules.
 
+Physical keyboards and mice use separate native queues. See
+[Native keyboard and mouse input](KEYBOARD-MOUSE.md) for their exact layouts,
+batch limits, lifecycle, idle semantics, and C++20 examples.
+
 ## Quick start
 
 The examples are portable C++20 contract snippets. Host checks require no vendor
@@ -106,9 +115,10 @@ cd ps5-native-gamepad-input-research
 make check
 ```
 
-`make check` verifies the documented structure sizes and offsets, exercises
-button-edge and neutral-state behavior, checks axis conversion, and compiles
-every example with `-std=c++20 -Wall -Wextra -Wpedantic -Werror`.
+`make check` verifies all documented gamepad, keyboard, and mouse structure
+sizes and offsets; exercises edge and neutral-state behavior; checks axis
+conversion and mouse idle semantics; and compiles every portable example with
+strict C++20 warnings.
 
 For a native PS5 application, import `libSceUserService` and `libScePad`, then
 use the declarations in [`include/ps5_pad.hpp`](include/ps5_pad.hpp):
@@ -166,7 +176,8 @@ shutdown. [Usage and lifecycle](USAGE.md) provides the complete sequence.
 | [Usage and lifecycle](USAGE.md) | Imports, signed-in user, open/read/close, polling models, multi-user handling, and errors |
 | [Controller data format](CONTROLLER-DATA.md) | Exact 120-byte layout, buttons, axes, touch, motion, timing, and connection state |
 | [Controller features](FEATURES.md) | Information, dead zones, motion configuration, vibration, light bar, and adaptive triggers |
-| [Library responsibilities](LIBRARIES.md) | UserService and Pad versus HidControl and BluetoothHid |
+| [Native keyboard and mouse input](KEYBOARD-MOUSE.md) | Keyboard/mouse lifecycle, exact records, batching, HID usages, relative axes, and idle rules |
+| [Library responsibilities](LIBRARIES.md) | UserService, Pad, Keyboard, and Mouse versus lower-level HID services |
 | [Low-latency investigation](INVESTIGATION.md) | Queue behavior, driver path, API comparison, and recommended architecture |
 | [Static compatibility evidence](STATIC-EVIDENCE.md) | Functional read behavior, independently documented layouts, and library conclusions |
 | [Validation](VALIDATION.md) | Working applications, aggregate device evidence, publication boundary, and acceptance matrix |
@@ -185,6 +196,9 @@ shutdown. [Usage and lifecycle](USAGE.md) provides the complete sequence.
 | [`05-motion-touch.cpp`](examples/05-motion-touch.cpp) | Motion configuration and two-contact extraction |
 | [`06-feedback.cpp`](examples/06-feedback.cpp) | Vibration, light bar, adaptive-trigger feedback, and safe reset |
 | [`07-controller-info.cpp`](examples/07-controller-info.cpp) | Connection, device class, dead zones, and touch resolution |
+| [`08-keyboard-batch.cpp`](examples/08-keyboard-batch.cpp) | Sixteen-record keyboard drain and chronological HID-usage edges |
+| [`09-mouse-batch.cpp`](examples/09-mouse-batch.cpp) | Sixty-four-record relative mouse drain and correct zero-report handling |
+| [`native-keyboard-mouse-poc`](examples/native-keyboard-mouse-poc) | Deployable source overlay for attached-device capture evidence |
 
 The validation guide also summarizes two complete integrations: a native
 controller-forwarding path and an SDL-free UI adapter. Both were physically
@@ -197,6 +211,7 @@ not part of this repository.
 README.md                       Research overview and application guidance
 USAGE.md                        Initialization, polling, shutdown, and errors
 CONTROLLER-DATA.md              Exact input-record contract
+KEYBOARD-MOUSE.md               Native keyboard and mouse contracts
 FEATURES.md                     Motion, touch, feedback, and controller information
 LIBRARIES.md                    Native library selection and scope
 INVESTIGATION.md                Low-latency read-path analysis
@@ -204,10 +219,11 @@ STATIC-EVIDENCE.md              Functional compatibility evidence
 VALIDATION.md                   Device evidence and publication boundary
 PRODUCTION-INTEGRATION.md       Production batching, multiplexing, and telemetry lessons
 FOLLOW-UP.md                    Remaining optional experiments
-include/ps5_pad.hpp             Independently authored C++20 compatibility declarations
+include/ps5_*.hpp               Independently authored C++20 compatibility declarations
 examples/                       Small feature-focused C++20 examples
 tests/layout_check.cpp          ABI size and offset regression
 tests/logic_check.cpp           Edge, neutral-state, and axis regression
+tests/keyboard_mouse_check.cpp  Physical-input queue behavior regression
 .github/workflows/examples.yml  Host-side CI validation
 ```
 
@@ -216,8 +232,8 @@ tests/logic_check.cpp           Edge, neutral-state, and axis regression
 The investigation combined independently authored compatibility declarations,
 host-side contract tests, functional analysis of the application-facing
 interfaces, and runtime behavior from working applications using physical
-controllers. Proprietary files, private task data, binary fingerprints,
-analysis databases, and internal addresses are not published.
+devices. Proprietary files, private task data, binary fingerprints, analysis
+databases, and internal addresses are not published.
 
 Evidence labels are intentionally narrow:
 
@@ -237,8 +253,8 @@ examples. It does not contain vendor SDK files, firmware or system modules,
 retail binaries, decrypted content, signing material, credentials,
 cryptographic keys, analysis databases, controller firmware, copied vendor
 source, or proprietary headers. It does not provide an exploit or access-control
-bypass, pair controllers, update controller firmware, or replace platform
-device policy.
+bypass, pair devices, update device firmware, or replace platform device
+policy.
 
 The PS button, microphone mute control, speaker/microphone audio, headset
 routing, raw Bluetooth registration, and privileged system interception are

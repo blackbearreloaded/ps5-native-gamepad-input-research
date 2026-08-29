@@ -85,5 +85,10 @@ and aggregate test results needed to reproduce the application behavior.
 | Light bar | Contract-tested | No | Pending |
 | Adaptive triggers | Contract-tested | No | Pending |
 | Specialized device classes | Partial | No | Pending |
+| Keyboard lifecycle and 96-byte layout | Yes | Pending | Pending |
+| Keyboard HID usages/modifiers | Yes | Pending | Pending |
+| Mouse lifecycle and 40-byte layout | Yes | Pending | Pending |
+| Mouse motion/buttons/wheels | Yes | Pending | Pending |
+| Mouse zero-report idle behavior | Host-tested | Pending | Pending |
 
 Remaining device work is listed in [FOLLOW-UP.md](FOLLOW-UP.md).

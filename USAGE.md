@@ -1,5 +1,9 @@
 # Usage and lifecycle
 
+This document covers the gamepad path. For physical keyboard and mouse
+lifecycle, batching, layouts, and idle-read rules, see
+[Native keyboard and mouse input](KEYBOARD-MOUSE.md).
+
 ## Required libraries
 
 A native application needs imports for:

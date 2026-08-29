@@ -6,6 +6,8 @@
 |---|---|---|
 | `libSceUserService` | Resolve the signed-in user that owns a standard pad | Yes |
 | `libScePad` | Normalized input queue, controller information, motion controls, feedback | Yes |
+| `libSceKeyboard` | Normalized keyboard queue and current state | Yes, for physical keyboards |
+| `libSceMouse` | Relative mouse queue, buttons, wheels, and optional two-index merge | Yes, for physical mice |
 | `libSceHidControl` | Specialized device/service control | No, unless targeting its named devices |
 | `libSceBluetoothHid` | Raw Bluetooth HID registration, reports, callbacks, transport lifecycle | No |
 
@@ -75,6 +77,28 @@ setting, stick/trigger tuning, recording, feature-report, and device-management
 exports. These are not a game API. Their ABIs and privilege contracts are not
 established here; calling them can change controller or system state.
 
+## `libSceKeyboard`
+
+This is the normal application path for physical keyboard capture. The useful
+subset is initialization, signed-in-user open/get-handle, batched read,
+current-state read, connection query, and close. It exposes timestamped HID
+usage sets, left/right modifier bits, LED state, connection, and interception.
+
+Use the batched read for press/release fidelity. Character composition and
+layout mapping are separate from the native key queue. See
+[Native keyboard and mouse input](KEYBOARD-MOUSE.md).
+
+## `libSceMouse`
+
+This is the normal application path for physical mouse capture. The useful
+subset is initialization, signed-in-user open/get-handle, batched read, pointer
+speed/hand settings, and close. It exposes timestamped relative X/Y motion,
+vertical and horizontal wheels, five buttons, connection, and interception.
+
+It can open one device index or merge indexes 0 and 1. Neither mode requires
+raw HID parsing or Bluetooth registration. See
+[Native keyboard and mouse input](KEYBOARD-MOUSE.md).
+
 ## `libSceHidControl`
 
 The observed interface includes:
@@ -114,8 +138,8 @@ physical transport is Bluetooth or USB.
 
 ## Selection rule
 
-If the requirement can be described as “use the player's controller in an
-application,” select UserService + Pad. HidControl and BluetoothHid become
-relevant only when the requirement names a specialized device or raw transport
-operation that Pad does not provide and the corresponding contract has been
-independently established.
+Select UserService + Pad for a gamepad, UserService + Keyboard for a physical
+keyboard, and UserService + Mouse for a physical mouse. HidControl and
+BluetoothHid become relevant only when the requirement names a specialized
+device or raw transport operation that the normal application libraries do not
+provide and the corresponding contract has been independently established.

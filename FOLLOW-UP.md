@@ -59,6 +59,18 @@ Capacity 1 through `scePadRead` should be tested separately from `scePadReadStat
 
 ## Optional contract work
 
+### Keyboard and mouse
+
+- Run the native probe with an attached USB keyboard and mouse.
+- Confirm nonzero HID usages, left/right modifier bits, five mouse buttons,
+  vertical wheel, horizontal tilt where available, and unplug/reconnect state.
+- Measure device timestamps and queue depths separately from application poll
+  cadence.
+- Test merged mouse behavior only after the single-index path passes; use two
+  physical mice and verify how corresponding reports are combined.
+- Recover and validate text-composition semantics only if an application needs
+  the key-to-character helper rather than its own HID layout mapping.
+
 No more library analysis is required for the normal
 buttons/sticks/triggers/touch/motion path. Useful optional work is limited to:
 

@@ -1,4 +1,6 @@
 #include "ps5_pad.hpp"
+#include "ps5_keyboard.hpp"
+#include "ps5_mouse.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -25,4 +27,28 @@ int main()
     assert(offsetof(Data, device_unique_data) == 0x6c);
     assert(sizeof(ControllerInformation) == 28);
     assert(sizeof(TriggerEffect) == 120);
+
+    using KeyboardData = ps5::keyboard::Data;
+    using ps5::keyboard::OpenParameters;
+    assert(sizeof(OpenParameters) == 8);
+    assert(sizeof(KeyboardData) == 96);
+    assert(offsetof(KeyboardData, timestamp_us) == 0x00);
+    assert(offsetof(KeyboardData, intercepted) == 0x08);
+    assert(offsetof(KeyboardData, connected) == 0x10);
+    assert(offsetof(KeyboardData, length) == 0x14);
+    assert(offsetof(KeyboardData, leds) == 0x18);
+    assert(offsetof(KeyboardData, modifiers) == 0x1c);
+    assert(offsetof(KeyboardData, keycodes) == 0x20);
+
+    using MouseData = ps5::mouse::Data;
+    using MouseOpenParameters = ps5::mouse::OpenParameters;
+    assert(sizeof(MouseOpenParameters) == 8);
+    assert(sizeof(MouseData) == 40);
+    assert(offsetof(MouseData, timestamp_us) == 0x00);
+    assert(offsetof(MouseData, connected) == 0x08);
+    assert(offsetof(MouseData, buttons) == 0x0c);
+    assert(offsetof(MouseData, x) == 0x10);
+    assert(offsetof(MouseData, y) == 0x14);
+    assert(offsetof(MouseData, wheel) == 0x18);
+    assert(offsetof(MouseData, tilt) == 0x1c);
 }

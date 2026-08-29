@@ -91,10 +91,46 @@ require transport lifecycle handling and model-specific report parsing, and it
 would not naturally cover USB-connected controllers. No observed result shows
 a latency advantage over the normal Pad interface.
 
+## Keyboard input
+
+Functional analysis of the application-facing Keyboard interface supports:
+
+- signed-in-user opens for normal type 0 and indexed devices;
+- twelve logical slots in the analyzed implementation;
+- batched capacities from 1 through 16;
+- newest-record retention with chronological returned order;
+- a 96-byte record containing timestamp, interception, connection, LED and
+  modifier masks, and sixteen widened HID usage values;
+- a latest-state function with cached-state fallback; and
+- an idle/disconnected convention where `length` can be 1 while the first HID
+  usage is zero.
+
+This establishes the independently authored structure and queue semantics. It
+does not by itself prove a particular physical keyboard or system-software
+version.
+
+## Mouse input
+
+Functional analysis of the application-facing Mouse interface supports:
+
+- signed-in-user opens for normal type 0 and indexed devices;
+- eight logical slots in the analyzed implementation;
+- batched capacities from 1 through 64;
+- a 40-byte record containing timestamp, connection, five buttons,
+  interception, relative X/Y, vertical wheel, and horizontal tilt;
+- a zero-report connected-idle path that does not provide a new output record;
+- pointer-speed values from 0 through 8; and
+- optional merged behavior for indexes 0 and 1.
+
+The merged path combines corresponding raw records from both indexes rather
+than globally sorting them by timestamp. This establishes compatibility
+behavior, not physical-device validation.
+
 ## Confidence boundary
 
 Buttons, both sticks, analog triggers, lifecycle behavior, batched ordering,
 and connection handling are device-tested. Touch and motion layouts are
 contract-tested but still need dedicated physical fixtures. Vibration,
 lighting, and adaptive-trigger declarations compile and pass layout checks but
-remain explicitly marked as pending physical verification.
+remain explicitly marked as pending physical verification. Keyboard and mouse
+contracts are host-tested and await the dedicated attached-device probe.

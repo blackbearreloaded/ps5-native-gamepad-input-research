@@ -10,6 +10,8 @@ check:
 	"$$tmp"; \
 	$(CXX) $(CXXFLAGS) -Iinclude tests/logic_check.cpp -o "$$tmp"; \
 	"$$tmp"; \
+	$(CXX) $(CXXFLAGS) -Iinclude tests/keyboard_mouse_check.cpp -o "$$tmp"; \
+	"$$tmp"; \
 	for source in $(EXAMPLES); do \
 		$(CXX) $(CXXFLAGS) -Iinclude -fsyntax-only "$$source"; \
 	done

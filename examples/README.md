@@ -1,7 +1,8 @@
 # Examples
 
-All examples include [`../include/ps5_pad.hpp`](../include/ps5_pad.hpp) and
-are small C++20 feature snippets rather than separate packaged applications.
+The portable files are small C++20 feature snippets built against the
+independently authored headers in [`../include`](../include). The native probe
+subdirectory is a source overlay for a packaged application.
 
 | File | Demonstrates |
 |---|---|
@@ -12,6 +13,9 @@ are small C++20 feature snippets rather than separate packaged applications.
 | [`05-motion-touch.cpp`](05-motion-touch.cpp) | Motion configuration and bounded two-contact extraction |
 | [`06-feedback.cpp`](06-feedback.cpp) | Vibration, light bar, adaptive trigger feedback, safe stop/reset |
 | [`07-controller-info.cpp`](07-controller-info.cpp) | Connection, device class, reported dead zones, touch resolution |
+| [`08-keyboard-batch.cpp`](08-keyboard-batch.cpp) | Batched HID-usage press/release edges with disconnect/interception neutralization |
+| [`09-mouse-batch.cpp`](09-mouse-batch.cpp) | Batched relative motion/buttons and correct zero-report behavior |
+| [`native-keyboard-mouse-poc`](native-keyboard-mouse-poc) | Attached keyboard/mouse notification and `/download0` evidence probe |
 
 Run the host check from the repository root:
 
