@@ -13,9 +13,11 @@
 namespace ps5::keyboard {
 
 inline constexpr std::int32_t kTypeStandard = 0;
+inline constexpr std::uint16_t kSysmoduleId = 0x0106;
 inline constexpr std::size_t kSampleSize = 96;
 inline constexpr std::size_t kMaxSamples = 16;
 inline constexpr std::size_t kMaxKeys = 16;
+inline constexpr std::size_t kMaxOpenHandles = 12;
 
 using LedMask = std::uint32_t;
 using ModifierMask = std::uint32_t;

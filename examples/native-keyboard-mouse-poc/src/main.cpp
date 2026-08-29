@@ -27,8 +27,6 @@ std::int32_t sceSysmoduleUnloadModule(std::uint16_t id);
 namespace {
 
 constexpr std::string_view kLogPath = "/download0/ps5-input-probe.log";
-constexpr std::uint16_t kKeyboardSysmodule = 0x0106;
-constexpr std::uint16_t kMouseSysmodule = 0x00a9;
 
 struct NotificationRequest {
     std::array<std::uint8_t, 45> reserved{};
@@ -126,22 +124,46 @@ void record_checkpoint(
     record(line);
 }
 
+void record_open(const std::string_view device, const std::size_t index,
+                 const std::int32_t result) noexcept
+{
+    Line line;
+    line.append("OPEN device=");
+    line.append(device);
+    line.append(" index=");
+    line.append_integer(static_cast<std::int64_t>(index));
+    line.append(" result=");
+    line.append_integer(result);
+    record(line);
+}
+
 class InputSession final {
 public:
-    InputSession() noexcept = default;
+    InputSession() noexcept
+    {
+        keyboard_handles.fill(-1);
+        mouse_handles.fill(-1);
+    }
+
     ~InputSession() noexcept
     {
-        if (mouse_handle >= 0) {
-            static_cast<void>(sceMouseClose(mouse_handle));
+        for (const auto handle : mouse_handles) {
+            if (handle >= 0) {
+                static_cast<void>(sceMouseClose(handle));
+            }
         }
-        if (keyboard_handle >= 0) {
-            static_cast<void>(sceKeyboardClose(keyboard_handle));
+        for (const auto handle : keyboard_handles) {
+            if (handle >= 0) {
+                static_cast<void>(sceKeyboardClose(handle));
+            }
         }
         if (mouse_module_result == 0) {
-            static_cast<void>(sceSysmoduleUnloadModule(kMouseSysmodule));
+            static_cast<void>(
+                sceSysmoduleUnloadModule(ps5::mouse::kSysmoduleId));
         }
         if (keyboard_module_result == 0) {
-            static_cast<void>(sceSysmoduleUnloadModule(kKeyboardSysmodule));
+            static_cast<void>(
+                sceSysmoduleUnloadModule(ps5::keyboard::kSysmoduleId));
         }
         if (owns_user_service) {
             static_cast<void>(sceUserServiceTerminate());
@@ -162,7 +184,8 @@ public:
             return;
         }
 
-        keyboard_module_result = sceSysmoduleLoadModule(kKeyboardSysmodule);
+        keyboard_module_result =
+            sceSysmoduleLoadModule(ps5::keyboard::kSysmoduleId);
         record_checkpoint("keyboard-sysmodule", keyboard_module_result);
         if (keyboard_module_result >= 0) {
             keyboard_init_result = sceKeyboardInit();
@@ -170,12 +193,16 @@ public:
         }
         if (keyboard_init_result >= 0) {
             const ps5::keyboard::OpenParameters parameters{};
-            keyboard_handle = sceKeyboardOpen(
-                user_id, ps5::keyboard::kTypeStandard, 0, &parameters);
-            record_checkpoint("keyboard-open", keyboard_handle);
+            for (std::size_t index = 0; index < keyboard_handles.size();
+                 ++index) {
+                keyboard_handles[index] = sceKeyboardOpen(
+                    user_id, ps5::keyboard::kTypeStandard,
+                    static_cast<std::int32_t>(index), &parameters);
+                record_open("keyboard", index, keyboard_handles[index]);
+            }
         }
 
-        mouse_module_result = sceSysmoduleLoadModule(kMouseSysmodule);
+        mouse_module_result = sceSysmoduleLoadModule(ps5::mouse::kSysmoduleId);
         record_checkpoint("mouse-sysmodule", mouse_module_result);
         if (mouse_module_result >= 0) {
             mouse_init_result = sceMouseInit();
@@ -183,21 +210,38 @@ public:
         }
         if (mouse_init_result >= 0) {
             const ps5::mouse::OpenParameters parameters{};
-            mouse_handle = sceMouseOpen(
-                user_id, ps5::mouse::kTypeStandard, 0, &parameters);
-            record_checkpoint("mouse-open", mouse_handle);
+            for (std::size_t index = 0; index < mouse_handles.size();
+                 ++index) {
+                mouse_handles[index] = sceMouseOpen(
+                    user_id, ps5::mouse::kTypeStandard,
+                    static_cast<std::int32_t>(index), &parameters);
+                record_open("mouse", index, mouse_handles[index]);
+            }
         }
+    }
+
+    [[nodiscard]] bool has_keyboard() const noexcept
+    {
+        return std::any_of(keyboard_handles.begin(), keyboard_handles.end(),
+                           [](const auto handle) { return handle >= 0; });
+    }
+
+    [[nodiscard]] bool has_mouse() const noexcept
+    {
+        return std::any_of(mouse_handles.begin(), mouse_handles.end(),
+                           [](const auto handle) { return handle >= 0; });
     }
 
     std::int32_t user_service_result{-1};
     std::int32_t user_result{-1};
     std::int32_t keyboard_init_result{-1};
-    std::int32_t keyboard_handle{-1};
     std::int32_t keyboard_module_result{-1};
     std::int32_t mouse_init_result{-1};
-    std::int32_t mouse_handle{-1};
     std::int32_t mouse_module_result{-1};
     std::int32_t user_id{-1};
+    std::array<std::int32_t, ps5::keyboard::kMaxOpenHandles>
+        keyboard_handles{};
+    std::array<std::int32_t, ps5::mouse::kMaxOpenHandles> mouse_handles{};
     bool owns_user_service{};
 };
 
@@ -212,18 +256,19 @@ void record_start(const InputSession& session) noexcept
     line.append_integer(session.keyboard_init_result);
     line.append(" keyboardModule=");
     line.append_integer(session.keyboard_module_result);
-    line.append(" keyboardHandle=");
-    line.append_integer(session.keyboard_handle);
+    line.append(" keyboardOpen=");
+    line.append_integer(session.has_keyboard());
     line.append(" mouseInit=");
     line.append_integer(session.mouse_init_result);
     line.append(" mouseModule=");
     line.append_integer(session.mouse_module_result);
-    line.append(" mouseHandle=");
-    line.append_integer(session.mouse_handle);
+    line.append(" mouseOpen=");
+    line.append_integer(session.has_mouse());
     record(line);
 }
 
-void record_keyboard(const ps5::keyboard::Data& sample) noexcept
+void record_keyboard(const std::size_t index,
+                     const ps5::keyboard::Data& sample) noexcept
 {
     std::uint16_t first_usage = 0;
     for (const auto usage : sample.keycodes) {
@@ -234,7 +279,9 @@ void record_keyboard(const ps5::keyboard::Data& sample) noexcept
     }
 
     Line line;
-    line.append("KEYBOARD timestamp=");
+    line.append("KEYBOARD index=");
+    line.append_integer(static_cast<std::int64_t>(index));
+    line.append(" timestamp=");
     line.append_integer(static_cast<std::int64_t>(sample.timestamp_us));
     line.append(" connected=");
     line.append_integer(sample.connected);
@@ -256,10 +303,13 @@ void record_keyboard(const ps5::keyboard::Data& sample) noexcept
                        [](const std::uint16_t usage) { return usage != 0; });
 }
 
-void record_mouse(const ps5::mouse::Data& sample) noexcept
+void record_mouse(const std::size_t index,
+                  const ps5::mouse::Data& sample) noexcept
 {
     Line line;
-    line.append("MOUSE timestamp=");
+    line.append("MOUSE index=");
+    line.append_integer(static_cast<std::int64_t>(index));
+    line.append(" timestamp=");
     line.append_integer(static_cast<std::int64_t>(sample.timestamp_us));
     line.append(" connected=");
     line.append_integer(sample.connected);
@@ -288,7 +338,7 @@ int main()
     session.open();
     record_start(session);
 
-    if (session.keyboard_handle < 0 && session.mouse_handle < 0) {
+    if (!session.has_keyboard() && !session.has_mouse()) {
         notify("PS5 input probe: keyboard and mouse open failed");
     } else {
         notify("PS5 input probe ready: type and move/click");
@@ -296,20 +346,29 @@ int main()
 
     bool keyboard_observed = false;
     bool mouse_observed = false;
-    bool keyboard_read_error = false;
-    bool mouse_read_error = false;
-    bool keyboard_state_recorded = false;
     std::size_t keyboard_record_count = 0;
     std::size_t mouse_record_count = 0;
-    ps5::keyboard::Data previous_keyboard{};
+    std::array<bool, ps5::keyboard::kMaxOpenHandles> keyboard_read_error{};
+    std::array<bool, ps5::mouse::kMaxOpenHandles> mouse_read_error{};
+    std::array<bool, ps5::keyboard::kMaxOpenHandles>
+        keyboard_state_recorded{};
+    std::array<bool, ps5::mouse::kMaxOpenHandles> mouse_state_recorded{};
+    std::array<ps5::keyboard::Data, ps5::keyboard::kMaxOpenHandles>
+        previous_keyboard{};
+    std::array<ps5::mouse::Data, ps5::mouse::kMaxOpenHandles> previous_mouse{};
     std::array<ps5::keyboard::Data, ps5::keyboard::kMaxSamples>
         keyboard_samples{};
     std::array<ps5::mouse::Data, ps5::mouse::kMaxSamples> mouse_samples{};
 
     for (;;) {
-        if (session.keyboard_handle >= 0) {
+        for (std::size_t index = 0; index < session.keyboard_handles.size();
+             ++index) {
+            const auto handle = session.keyboard_handles[index];
+            if (handle < 0) {
+                continue;
+            }
             const auto count = sceKeyboardRead(
-                session.keyboard_handle, keyboard_samples.data(),
+                handle, keyboard_samples.data(),
                 static_cast<std::int32_t>(keyboard_samples.size()));
             if (count > 0) {
                 const auto returned = std::min(
@@ -319,55 +378,73 @@ int main()
                     const bool active =
                         has_active_usage(sample) || sample.modifiers != 0;
                     const bool changed =
-                        !keyboard_state_recorded ||
-                        sample.connected != previous_keyboard.connected ||
-                        sample.intercepted != previous_keyboard.intercepted ||
-                        sample.leds != previous_keyboard.leds ||
-                        sample.modifiers != previous_keyboard.modifiers ||
-                        sample.keycodes != previous_keyboard.keycodes;
-                    if (changed && keyboard_record_count < 64) {
-                        record_keyboard(sample);
+                        !keyboard_state_recorded[index] ||
+                        sample.connected != previous_keyboard[index].connected ||
+                        sample.intercepted != previous_keyboard[index].intercepted ||
+                        sample.leds != previous_keyboard[index].leds ||
+                        sample.modifiers != previous_keyboard[index].modifiers ||
+                        sample.keycodes != previous_keyboard[index].keycodes;
+                    const bool relevant =
+                        sample.connected != 0 ||
+                        previous_keyboard[index].connected != 0;
+                    if (relevant && changed && keyboard_record_count < 64) {
+                        record_keyboard(index, sample);
                         ++keyboard_record_count;
                     }
-                    previous_keyboard = sample;
-                    keyboard_state_recorded = true;
+                    previous_keyboard[index] = sample;
+                    keyboard_state_recorded[index] = true;
                     if (!keyboard_observed && ps5::keyboard::is_usable(sample) &&
                         active) {
                         keyboard_observed = true;
                         notify("PS5 input probe: keyboard input captured");
                     }
                 }
-            } else if (count < 0 && !keyboard_read_error) {
-                keyboard_read_error = true;
-                record_checkpoint("keyboard-read", count);
+            } else if (count < 0 && !keyboard_read_error[index]) {
+                keyboard_read_error[index] = true;
+                record_open("keyboard-read", index, count);
             }
         }
 
-        if (session.mouse_handle >= 0) {
+        for (std::size_t index = 0; index < session.mouse_handles.size();
+             ++index) {
+            const auto handle = session.mouse_handles[index];
+            if (handle < 0) {
+                continue;
+            }
             const auto count = sceMouseRead(
-                session.mouse_handle, mouse_samples.data(),
+                handle, mouse_samples.data(),
                 static_cast<std::int32_t>(mouse_samples.size()));
             if (count > 0) {
                 const auto returned = std::min(
                     static_cast<std::size_t>(count), mouse_samples.size());
                 for (const auto& sample :
                      std::span{mouse_samples}.first(returned)) {
-                    if (mouse_record_count < 128) {
-                        record_mouse(sample);
+                    const bool activity =
+                        sample.x != 0 || sample.y != 0 || sample.wheel != 0 ||
+                        sample.tilt != 0 || sample.buttons != 0;
+                    const bool state_changed =
+                        !mouse_state_recorded[index] ||
+                        sample.connected != previous_mouse[index].connected ||
+                        sample.buttons != previous_mouse[index].buttons;
+                    const bool relevant =
+                        sample.connected != 0 ||
+                        previous_mouse[index].connected != 0;
+                    if (relevant && (activity || state_changed) &&
+                        mouse_record_count < 128) {
+                        record_mouse(index, sample);
                         ++mouse_record_count;
                     }
-                    const bool changed = sample.x != 0 || sample.y != 0 ||
-                                         sample.wheel != 0 || sample.tilt != 0 ||
-                                         sample.buttons != 0;
+                    previous_mouse[index] = sample;
+                    mouse_state_recorded[index] = true;
                     if (!mouse_observed && ps5::mouse::is_usable(sample) &&
-                        changed) {
+                        activity) {
                         mouse_observed = true;
                         notify("PS5 input probe: mouse input captured");
                     }
                 }
-            } else if (count < 0 && !mouse_read_error) {
-                mouse_read_error = true;
-                record_checkpoint("mouse-read", count);
+            } else if (count < 0 && !mouse_read_error[index]) {
+                mouse_read_error[index] = true;
+                record_open("mouse-read", index, count);
             }
         }
 

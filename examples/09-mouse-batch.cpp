@@ -19,8 +19,8 @@ template <typename Callback>
     const auto count = sceMouseRead(
         handle, samples.data(), static_cast<std::int32_t>(samples.size()));
     if (count <= 0) {
-        // Zero means that a connected device produced no new report. Do not
-        // parse the buffer or clear the remembered held-button state.
+        // Zero means no output record was returned. Do not parse the buffer
+        // or clear the remembered held-button state.
         return count;
     }
 

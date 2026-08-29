@@ -13,8 +13,10 @@
 namespace ps5::mouse {
 
 inline constexpr std::int32_t kTypeStandard = 0;
+inline constexpr std::uint16_t kSysmoduleId = 0x00a9;
 inline constexpr std::size_t kSampleSize = 40;
 inline constexpr std::size_t kMaxSamples = 64;
+inline constexpr std::size_t kMaxOpenHandles = 8;
 inline constexpr std::uint8_t kBehaviorMerged = 1U << 0U;
 
 using ButtonMask = std::uint32_t;
