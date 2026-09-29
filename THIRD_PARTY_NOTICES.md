@@ -1,4 +1,10 @@
-# Legal and project notice
+# Third-party notices
+
+## Credits and acknowledgements
+
+| Project | Relevance |
+| --- | --- |
+| [Ghostcontrol — PS5 USB Controller Patcher](https://github.com/StonedModder/Ghostcontrol-PS5-USB-Controller-Patcher) | Inspiration and related investigation into third-party USB controller support and virtual DualSense input by StonedModder |
 
 This repository contains independently authored interoperability
 documentation and example code for controller input. It is intended for
