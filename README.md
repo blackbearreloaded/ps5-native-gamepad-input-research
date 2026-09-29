@@ -252,6 +252,8 @@ Evidence labels are intentionally narrow:
 
 ## External projects and acknowledgements
 
+Thanks to John Törnblom (ps5-payload-dev) for the [PS5 Payload SDK](https://github.com/ps5-payload-dev/sdk), which much of the PS5 homebrew scene is built on.
+
 | Project | Relevance |
 | --- | --- |
 | [Ghostcontrol — PS5 USB Controller Patcher](https://github.com/StonedModder/Ghostcontrol-PS5-USB-Controller-Patcher) | Inspiration and related investigation into third-party USB controller support and virtual DualSense input by StonedModder |
