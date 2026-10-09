@@ -1,0 +1,14 @@
+# Local build products
+build/
+*.o
+*.obj
+*.exe
+*.elf
+
+# Local working directories
+.local/
+private/
+
+# Local runtime evidence
+*.log
+results/
